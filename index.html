@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>BB Chat</title>
+
+<style>
+
+body{
+margin:0;
+font-family:-apple-system,BlinkMacSystemFont;
+background:#0f0f0f;
+color:white;
+}
+
+header{
+padding:16px;
+font-size:20px;
+font-weight:600;
+background:#1c1c1c;
+text-align:center;
+}
+
+#chat{
+height:70vh;
+overflow:auto;
+padding:16px;
+}
+
+.message{
+background:#262626;
+padding:12px;
+border-radius:14px;
+margin-bottom:10px;
+max-width:70%;
+}
+
+.me{
+background:#2b7cff;
+margin-left:auto;
+}
+
+input{
+position:fixed;
+bottom:0;
+left:0;
+width:80%;
+border:none;
+padding:16px;
+font-size:16px;
+background:#1c1c1c;
+color:white;
+}
+
+button{
+position:fixed;
+bottom:0;
+right:0;
+width:20%;
+border:none;
+padding:16px;
+font-size:16px;
+background:#2b7cff;
+color:white;
+}
+
+</style>
+</head>
+
+<body>
+
+<header>
+BB CHAT
+</header>
+
+<div id="chat"></div>
+
+<input id="msg" placeholder="Сообщение...">
+<button onclick="send()">Отправить</button>
+
+<script>
+
+function send(){
+
+let text=document.getElementById("msg").value
+
+if(text=="")return
+
+let div=document.createElement("div")
+div.className="message me"
+div.innerText=text
+
+document.getElementById("chat").appendChild(div)
+
+document.getElementById("msg").value=""
+
+}
+
+</script>
+
+</body>
+</html>
