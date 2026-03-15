@@ -1,103 +1,277 @@
 <!DOCTYPE html>
-<html>
+<html lang="ru">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>BB Chat</title>
-
-<style>
-
-body{
-margin:0;
-font-family:-apple-system,BlinkMacSystemFont;
-background:#0f0f0f;
-color:white;
-}
-
-header{
-padding:16px;
-font-size:20px;
-font-weight:600;
-background:#1c1c1c;
-text-align:center;
-}
-
-#chat{
-height:70vh;
-overflow:auto;
-padding:16px;
-}
-
-.message{
-background:#262626;
-padding:12px;
-border-radius:14px;
-margin-bottom:10px;
-max-width:70%;
-}
-
-.me{
-background:#2b7cff;
-margin-left:auto;
-}
-
-input{
-position:fixed;
-bottom:0;
-left:0;
-width:80%;
-border:none;
-padding:16px;
-font-size:16px;
-background:#1c1c1c;
-color:white;
-}
-
-button{
-position:fixed;
-bottom:0;
-right:0;
-width:20%;
-border:none;
-padding:16px;
-font-size:16px;
-background:#2b7cff;
-color:white;
-}
-
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+  <title>BB Chat</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <style>
+    :root{
+      --bg:#0b1220;
+      --bg2:#111a2b;
+      --card:rgba(255,255,255,.08);
+      --line:rgba(255,255,255,.08);
+      --text:#eef4ff;
+      --muted:#8fa1c0;
+      --accent:#3b82f6;
+      --accent2:#60a5fa;
+      --danger:#ff5d73;
+      --ok:#26c281;
+      --shadow:0 20px 60px rgba(0,0,0,.35);
+      --radius:24px;
+      --safe-top: env(safe-area-inset-top, 0px);
+      --safe-bottom: env(safe-area-inset-bottom, 0px);
+    }
+    *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+    html,body{margin:0;height:100%;background:linear-gradient(180deg,#0a1020,#111827 40%,#09111f);font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","Segoe UI",sans-serif;color:var(--text)}
+    body{overflow:hidden}
+    .app{height:100%;display:flex;flex-direction:column;padding-top:var(--safe-top);padding-bottom:var(--safe-bottom)}
+    .topbar{padding:14px 16px 10px;display:flex;align-items:center;gap:12px}
+    .avatar{width:42px;height:42px;border-radius:50%;display:grid;place-items:center;background:linear-gradient(135deg,#fbbf24,#fb7185);font-weight:800;box-shadow:var(--shadow)}
+    .top-meta{min-width:0;flex:1}
+    .title{font-size:20px;font-weight:800;letter-spacing:.2px}
+    .subtitle{font-size:12px;color:var(--muted);margin-top:2px}
+    .pill{padding:9px 12px;border-radius:999px;background:var(--card);border:1px solid var(--line);font-size:12px;color:#d7e3ff}
+    .rooms{display:flex;gap:10px;overflow:auto;padding:6px 16px 12px}
+    .rooms::-webkit-scrollbar{display:none}
+    .room{flex:0 0 auto;padding:12px 14px;border-radius:18px;background:rgba(255,255,255,.06);border:1px solid var(--line);min-width:120px;cursor:pointer}
+    .room.active{background:linear-gradient(135deg,rgba(59,130,246,.35),rgba(96,165,250,.18));border-color:rgba(96,165,250,.45)}
+    .room-name{font-size:14px;font-weight:700}
+    .room-desc{font-size:11px;color:var(--muted);margin-top:4px}
+    .chat-shell{flex:1;min-height:0;padding:0 12px 12px}
+    .chat{height:100%;display:flex;flex-direction:column;background:rgba(255,255,255,.05);border:1px solid var(--line);backdrop-filter:blur(14px);border-radius:28px;box-shadow:var(--shadow);overflow:hidden}
+    .chat-head{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+    .chat-head-left{display:flex;flex-direction:column}
+    .chat-head-title{font-size:16px;font-weight:800}
+    .chat-head-sub{font-size:12px;color:var(--muted);margin-top:3px}
+    .messages{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:10px;scroll-behavior:smooth}
+    .messages::-webkit-scrollbar{display:none}
+    .msg{max-width:82%;padding:12px 14px;border-radius:20px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.06);align-self:flex-start}
+    .msg.me{align-self:flex-end;background:linear-gradient(135deg,#2563eb,#3b82f6);border:none}
+    .msg-author{font-size:11px;font-weight:700;color:#d5e4ff;margin-bottom:6px;opacity:.92}
+    .msg-text{white-space:pre-wrap;word-break:break-word;line-height:1.35}
+    .msg-time{font-size:10px;opacity:.75;margin-top:6px;text-align:right}
+    .composer{display:flex;gap:10px;padding:12px;border-top:1px solid var(--line);background:rgba(10,16,28,.55)}
+    .input{flex:1;border:none;outline:none;border-radius:18px;background:rgba(255,255,255,.07);color:var(--text);padding:14px 16px;font-size:15px}
+    .send{border:none;outline:none;border-radius:18px;padding:0 18px;font-size:15px;font-weight:800;background:linear-gradient(135deg,#3b82f6,#60a5fa);color:white;min-width:88px}
+    .screen{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:linear-gradient(180deg,#0a1020,#111827);padding:20px;z-index:50}
+    .screen.show{display:flex}
+    .panel{width:min(100%,420px);padding:22px;border-radius:28px;background:rgba(255,255,255,.06);border:1px solid var(--line);box-shadow:var(--shadow)}
+    .panel h1{margin:0 0 8px;font-size:28px}
+    .panel p{margin:0;color:var(--muted);line-height:1.45}
+    .panel .actions{display:flex;gap:10px;margin-top:16px}
+    .btn{border:none;border-radius:18px;padding:14px 16px;font-size:15px;font-weight:700}
+    .btn.primary{background:linear-gradient(135deg,#3b82f6,#60a5fa);color:#fff;flex:1}
+    .btn.ghost{background:rgba(255,255,255,.07);color:#fff;flex:1}
+    .hint{margin-top:14px;font-size:12px;color:var(--muted)}
+  </style>
 </head>
-
 <body>
+  <div id="blocked" class="screen show">
+    <div class="panel">
+      <h1>BB Chat</h1>
+      <p id="blockedText">Проверяем доступ…</p>
+      <div class="actions">
+        <button class="btn ghost" onclick="location.reload()">Обновить</button>
+      </div>
+      <div class="hint">Быстрый MVP: интерфейс Telegram Mini App + реальный чат через Supabase.</div>
+    </div>
+  </div>
 
-<header>
-BB CHAT
-</header>
+  <div class="app">
+    <div class="topbar">
+      <div class="avatar" id="avatar">BB</div>
+      <div class="top-meta">
+        <div class="title">BB Chat</div>
+        <div class="subtitle" id="userLine">Закрытый Telegram Mini App</div>
+      </div>
+      <div class="pill" id="statusPill">offline</div>
+    </div>
 
-<div id="chat"></div>
+    <div class="rooms" id="rooms"></div>
 
-<input id="msg" placeholder="Сообщение...">
-<button onclick="send()">Отправить</button>
+    <div class="chat-shell">
+      <div class="chat">
+        <div class="chat-head">
+          <div class="chat-head-left">
+            <div class="chat-head-title" id="roomTitle">Основной чат</div>
+            <div class="chat-head-sub" id="roomSub">Сообщения в реальном времени</div>
+          </div>
+          <div class="pill" id="roomCount">0 msg</div>
+        </div>
+        <div class="messages" id="messages"></div>
+        <div class="composer">
+          <input id="messageInput" class="input" placeholder="Сообщение..." maxlength="1000" />
+          <button id="sendBtn" class="send">Отправить</button>
+        </div>
+      </div>
+    </div>
+  </div>
 
 <script>
+const SUPABASE_URL = 'PASTE_SUPABASE_URL_HERE';
+const SUPABASE_ANON_KEY = 'PASTE_SUPABASE_ANON_OR_PUBLISHABLE_KEY_HERE';
 
-function send(){
+// Для быстрого MVP сюда впиши Telegram ID тех, кому можно заходить.
+// Свой ID можно узнать у @userinfobot
+const ALLOWED_TELEGRAM_IDS = [123456789];
 
-let text=document.getElementById("msg").value
+const ROOMS = [
+  { id: 'main', name: 'Основной', desc: 'Для всех своих' },
+  { id: 'vip', name: 'VIP', desc: 'Тихий приватный чат' },
+  { id: 'news', name: 'Новости', desc: 'Анонсы и апдейты' }
+];
 
-if(text=="")return
-
-let div=document.createElement("div")
-div.className="message me"
-div.innerText=text
-
-document.getElementById("chat").appendChild(div)
-
-document.getElementById("msg").value=""
-
+const tg = window.Telegram && window.Telegram.WebApp ? window.Telegram.WebApp : null;
+if (tg) {
+  tg.ready();
+  tg.expand();
+  tg.disableVerticalSwipes();
+  document.body.style.background = '#0b1220';
 }
 
-</script>
+const user = tg?.initDataUnsafe?.user || null;
+const userId = user?.id || null;
+const displayName = [user?.first_name, user?.last_name].filter(Boolean).join(' ') || user?.username || 'Гость';
+const username = user?.username ? '@' + user.username : 'без username';
 
+const avatar = document.getElementById('avatar');
+const blocked = document.getElementById('blocked');
+const blockedText = document.getElementById('blockedText');
+const userLine = document.getElementById('userLine');
+const statusPill = document.getElementById('statusPill');
+const roomTitle = document.getElementById('roomTitle');
+const roomSub = document.getElementById('roomSub');
+const roomCount = document.getElementById('roomCount');
+const roomsWrap = document.getElementById('rooms');
+const messagesWrap = document.getElementById('messages');
+const messageInput = document.getElementById('messageInput');
+const sendBtn = document.getElementById('sendBtn');
+
+avatar.textContent = (displayName || 'BB').split(' ').map(x => x[0]).join('').slice(0,2).toUpperCase();
+userLine.textContent = `${displayName} · ${username}`;
+
+let supabase = null;
+let currentRoom = 'main';
+let channel = null;
+let accessGranted = false;
+
+function setStatus(text){ statusPill.textContent = text; }
+function timeFmt(value){
+  const d = new Date(value);
+  return d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+}
+function escapeHtml(str){
+  return (str || '').replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+}
+function renderRooms(){
+  roomsWrap.innerHTML = '';
+  ROOMS.forEach(room => {
+    const el = document.createElement('button');
+    el.className = 'room' + (room.id === currentRoom ? ' active' : '');
+    el.innerHTML = `<div class="room-name">${room.name}</div><div class="room-desc">${room.desc}</div>`;
+    el.onclick = () => switchRoom(room.id);
+    roomsWrap.appendChild(el);
+  });
+}
+function renderMessages(items){
+  messagesWrap.innerHTML = items.map(item => {
+    const mine = String(item.telegram_id) === String(userId);
+    return `
+      <div class="msg ${mine ? 'me' : ''}">
+        <div class="msg-author">${escapeHtml(item.author_name || 'Пользователь')}</div>
+        <div class="msg-text">${escapeHtml(item.text || '')}</div>
+        <div class="msg-time">${timeFmt(item.created_at)}</div>
+      </div>`;
+  }).join('');
+  roomCount.textContent = `${items.length} msg`;
+  messagesWrap.scrollTop = messagesWrap.scrollHeight;
+}
+async function loadMessages(){
+  setStatus('sync');
+  const { data, error } = await supabase
+    .from('room_messages')
+    .select('id, room_id, telegram_id, author_name, text, created_at')
+    .eq('room_id', currentRoom)
+    .order('created_at', { ascending: true })
+    .limit(200);
+  if (error) {
+    setStatus('error');
+    alert('Ошибка загрузки сообщений: ' + error.message);
+    return;
+  }
+  renderMessages(data || []);
+  setStatus('online');
+}
+async function sendMessage(){
+  const text = messageInput.value.trim();
+  if (!text || !accessGranted) return;
+  sendBtn.disabled = true;
+  const payload = {
+    room_id: currentRoom,
+    telegram_id: String(userId || ''),
+    author_name: displayName,
+    username: user?.username || null,
+    text
+  };
+  const { error } = await supabase.from('room_messages').insert(payload);
+  sendBtn.disabled = false;
+  if (error) {
+    alert('Не удалось отправить сообщение: ' + error.message);
+    return;
+  }
+  messageInput.value = '';
+}
+async function switchRoom(roomId){
+  currentRoom = roomId;
+  const room = ROOMS.find(x => x.id === roomId);
+  roomTitle.textContent = room?.name || 'Чат';
+  roomSub.textContent = room?.desc || '';
+  renderRooms();
+  subscribeRoom();
+  await loadMessages();
+}
+function subscribeRoom(){
+  if (channel) supabase.removeChannel(channel);
+  channel = supabase
+    .channel('room-' + currentRoom)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'room_messages', filter: `room_id=eq.${currentRoom}` }, () => loadMessages())
+    .subscribe();
+}
+function checkAccess(){
+  if (!tg || !userId) {
+    blockedText.textContent = 'Открой мини-апп именно внутри Telegram, чтобы получить доступ.';
+    return false;
+  }
+  if (!ALLOWED_TELEGRAM_IDS.includes(userId)) {
+    blockedText.textContent = `Доступ закрыт для Telegram ID ${userId}. Добавь свой ID в массив ALLOWED_TELEGRAM_IDS.`;
+    return false;
+  }
+  blocked.classList.remove('show');
+  return true;
+}
+async function start(){
+  if (SUPABASE_URL.includes('PASTE_') || SUPABASE_ANON_KEY.includes('PASTE_')) {
+    blockedText.textContent = 'Сначала вставь в index.html URL и anon/publishable key из Supabase.';
+    return;
+  }
+  accessGranted = checkAccess();
+  if (!accessGranted) return;
+  supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+  renderRooms();
+  subscribeRoom();
+  await loadMessages();
+}
+
+sendBtn.addEventListener('click', sendMessage);
+messageInput.addEventListener('keydown', e => {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendMessage();
+  }
+});
+start();
+</script>
 </body>
 </html>
